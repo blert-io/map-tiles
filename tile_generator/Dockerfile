@@ -1,42 +1,40 @@
 FROM python:3.10
 
+# Install wget and bash (if not present)
+RUN apt-get update && apt-get install -y wget bzip2
+
 # Install miniconda
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-RUN chmod +x Miniconda3-latest-Linux-x86_64.sh
-RUN ./Miniconda3-latest-Linux-x86_64.sh -b -p /usr/local/bin/miniconda3
-RUN ls /usr/local/bin/miniconda3/bin
-ENV PATH="/usr/local/bin/miniconda3/bin:${PATH}"
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+    && chmod +x Miniconda3-latest-Linux-x86_64.sh \
+    && ./Miniconda3-latest-Linux-x86_64.sh -b -p /usr/local/miniconda3 \
+    && rm Miniconda3-latest-Linux-x86_64.sh
 
-# Create a conda env
-RUN conda create --name vips python=3.7
+ENV PATH="/usr/local/miniconda3/bin:${PATH}"
 
-# Update all future "RUN" commands to use the conda env
+# Accept Terms of Service for required channels
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main \
+    && conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+# Create conda environment
+RUN conda create --yes --name vips python=3.7
+
+# Use the conda env for all future commands
 SHELL ["conda", "run", "--no-capture-output", "-n", "vips", "/bin/bash", "-c"]
 
-# Install vips
-RUN conda install --channel conda-forge pyvips
+# Install vips and other dependencies
+RUN conda install --yes -c conda-forge pyvips openjdk=11 maven
 
 # Install python dependencies
 COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
-RUN pip3 install pyvips
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir pyvips
 
-# Install Java 11
-RUN conda install -c conda-forge openjdk=11
-
-# Install Maven
-RUN conda install -c conda-forge maven
-
-# Clone runelite repo
-# RUN git clone https://github.com/runelite/runelite.git /runelite
-# Install runelite
-# RUN mvn -f /runelite/pom.xml install -pl cache -am -DskipTests
-
-# Add required files
+# Add your project files
 ADD src src
-ADD java /java
+ADD java java
 
-RUN chmod +x /java/gradlew
-RUN /java/gradlew -p /java build
+RUN chmod +x java/gradlew
+RUN ./java/gradlew -p java build
 
-CMD [ "conda", "run", "--no-capture-output", "-n", "vips", "python", "./src/tile_generator.py" ]
+# Set default command
+CMD ["conda", "run", "--no-capture-output", "-n", "vips", "python", "./src/tile_generator.py"]

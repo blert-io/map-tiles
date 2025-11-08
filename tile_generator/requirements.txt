@@ -6,3 +6,4 @@ numpy==1.19.0
 # pyvips==2.1.12
 requests==2.27.1
 beautifulsoup4==4.11.1
+tqdm==4.66.1
