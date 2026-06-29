@@ -2,5 +2,14 @@ output
 cache
 .idea/
 **/.DS_Store
-generated_images/diff-map*.png
-generated_images/previous-map*.png
+
+# Generator artifacts and tile data.
+/generated_images/
+/0/
+/1/
+/2/
+/3/
+
+# Sync marker and local settings.
+.sync-stamp
+scripts/tiles.local.env
