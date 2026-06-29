@@ -23,3 +23,14 @@ export DOCKER_BUILDKIT=0
 docker build ./tile_generator -t "map-tile-generator"
 docker run -it -v $(pwd):/repo map-tile-generator
 ```
+
+## Hosting the tiles
+
+Blert's fork replaces the committed tile data with a script that syncs them with
+an S3-compatible storage bucket.
+See [scripts/README.md](scripts/README.md) for setup and usage.
+
+## Credits
+
+Thanks to [Explv](https://github.com/Explv/osrs_map_tiles) for writing the
+original tile generator.

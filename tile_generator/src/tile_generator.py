@@ -82,7 +82,9 @@ def main():
         current_map_image_name = os.path.join(GENERATED_FULL_IMAGES, f"current-map-image-{plane}.png")
         generated_file_name = os.path.join(GENERATED_FULL_IMAGES, f"new-map-image-{plane}.png")
 
-        os.replace(current_map_image_name, previous_map_image_name)
+        # On a first/full run there is no current image to rotate.
+        if os.path.isfile(current_map_image_name):
+            os.replace(current_map_image_name, previous_map_image_name)
         os.replace(generated_file_name, current_map_image_name)
        
 
@@ -275,8 +277,14 @@ def generate_tiles_for_plane(plane):
     old_image_location = os.path.join(GENERATED_FULL_IMAGES, f"current-map-image-{plane}.png")
     new_image_location = os.path.join(GENERATED_FULL_IMAGES, f"new-map-image-{plane}.png")
 
-    old_image = pyvips.Image.new_from_file(old_image_location)
     new_image = pyvips.Image.new_from_file(new_image_location)
+
+    # When no baseline exists to diff against, every tile is generated.
+    if os.path.isfile(old_image_location):
+        old_image = pyvips.Image.new_from_file(old_image_location)
+    else:
+        old_image = None
+        LOG.info(f"{log_prefix} No baseline image; generating every tile")
 
     image_width = new_image.width
     image_width_tiles = int(image_width / TILE_SIZE_PX)
@@ -286,8 +294,9 @@ def generate_tiles_for_plane(plane):
     LOG.info(f"{log_prefix} Calculating changed tiles")
     changed_tiles = get_changed_tiles(old_image, new_image, plane, starting_zoom)
 
-    LOG.info(f"{log_prefix} Storing diff image")
-    output_tile_diff_image(changed_tiles, new_image_location,  str(Path(GENERATED_FULL_IMAGES, f"diff-map-image-{plane}.png")))
+    if old_image is not None:
+        LOG.info(f"{log_prefix} Storing diff image")
+        output_tile_diff_image(changed_tiles, new_image_location,  str(Path(GENERATED_FULL_IMAGES, f"diff-map-image-{plane}.png")))
 
     LOG.info(f"{log_prefix} Found {len(changed_tiles)} changed tiles at zoom level {starting_zoom}")
 
@@ -353,6 +362,10 @@ def get_changed_tiles(old_image, new_image, plane, zoom):
 
 def has_tile_changed(plane, zoom, tile_x, tile_y, old_image, new_image):
     new_image_tile = new_image.crop(tile_x, tile_y, TILE_SIZE_PX, TILE_SIZE_PX)
+
+    # No baseline: treat every tile as changed.
+    if old_image is None:
+        return ((tile_x, tile_y), new_image_tile, True)
 
     # If there is no tile at (tile_x, tile_y) in the old image
     if tile_x > old_image.width - TILE_SIZE_PX or tile_y > old_image.height - TILE_SIZE_PX:
